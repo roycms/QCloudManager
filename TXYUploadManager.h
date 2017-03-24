@@ -9,22 +9,7 @@
 #import <Foundation/Foundation.h>
 #import "TXYBase.h"
 
-
 @class TXYUploadTaskQueue;
-
-/*!
- @enum TXYCloudType enum
- @abstract 上传的云类型.
- */
-typedef NS_ENUM(NSInteger, TXYCloudType)
-{
-    /*! 图片云  */
-    TXYCloudTypeForImage = 0,
-    /*! 文件云  */
-    TXYCloudTypeForFile = 1,
-    /*! 视频云  */
-    TXYCloudTypeForVideo = 2,
-};
 
 /*!
  @enum TXYUploadTaskState enum
@@ -103,8 +88,6 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
     NSMutableArray       *_commandLocalQueue;
     NSOperationQueue     *_fileUploadQueue;
     NSOperationQueue     *_commandUploadQueue;
-    TXYCloudType         _cloudType;
-    
 }
 
 
@@ -113,13 +96,21 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
  */
 + (NSString *)version;
 
+/*!
+ * @brief 注册应用程序的AppId和签名，只需要注册一次，可更新
+ * @param appId 向腾讯云申请的业务id,必填
+ * @param userId 用户id,业务没有没有用户Id的概念，可以不填
+ * @param sign 应用级别的签名，必填
+ * @return 成功返回YES，失败返回NO
+ */
++ (BOOL)authorize:(NSString *)appId userId:(NSString *)userId sign:(NSString *)sign;
 
 /**
  *  检验签名的合法性
  *  @param sign 待检验的签名
  *  @return 签名验证的返回码
  */
-+ (TXYSignatureRetCode)checkSign:(NSString*)appId sign:(NSString *)sign;
++ (TXYSignatureRetCode)validateSignature:(NSString *)sign;
 
 /*!
  * @brief 得到用户设备号的一个唯一ID,向腾讯云反馈问题的时候，提供这个id
@@ -139,17 +130,15 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
 
 /*!
  * @brief TXYUploadManager构造函数
- * @param cloudType, 文件云，图片云、视频云
  * @param persistenceId TXYUploadManager实例对应的持久化id,id必须全局唯一,persistenceId为nil时，上传任务不持久化
- * @appId 用户注册的appId
- * @sigin 签名信息
  * @return TXYUploadManager实例
  */
-- (instancetype)initWithCloudType:(TXYCloudType)cloudType persistenceId:(NSString *)persistenceId appId:(NSString*)appId;
+- (instancetype)initWithPersistenceId:(NSString *)persistenceId;
 
 /*!
  * @brief 上传视频或者图片任务,需要保证已经注册了appID和sign信息
  * @param task 待上传任务
+ * @param sign 本次有效的签名，不填则使用全局签名
  * @param complete 上传完成后的回调函数
  * @param progress 上传进度的回调函数
  * @param stateChange 上传任务状态变化回调函数
@@ -158,6 +147,7 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
  * @note 对于历史上传任务，恢复执行必须调这个接口，重新传入回调
  */
 - (BOOL)upload:(TXYUploadTask *)task
+          sign:(NSString *)sign
       complete:(TXYUpCompletionHandler)complete
       progress:(TXYUpProgressHandler)progress
    stateChange:(TXYUpStateChangeHandler)stateChange;
@@ -167,7 +157,7 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
  * @param  taskId 上传任务id @see <TXYUploadTask> 里的taskId
  * @return 暂停成功返回YES，添加失败返回NO
  *
- * @note 任务已经上传完或者任务不存在，暂停会失败，暂停成功之后会通知TXYUploadTaskStatePause变化
+ * @note 任务已经上传完或者任务不存在，暂停会失败，暂停成功之后会通知TTXYUploadTaskStatePause变化
  */
 - (BOOL)pause:(int64_t)taskId;
 
@@ -214,21 +204,16 @@ typedef void (^TXYUpCommandCompletionHandler)(TXYTaskRsp *resp);
 /*!
  * @brief 发送文件操作命令，等待异步回调
  * @param command 上传命令
+ * @param sign 本次有效的签名，不填则使用全局签名
  * @param complete 命令发送的完成回调
  * @return 添加成功返回YES，失败返回NO。
  */
 - (BOOL)sendCommand:(TXYCommandTask *)command
+               sign:(NSString *)sign
            complete:(TXYUpCommandCompletionHandler)complete;
 
 
 
-/******************************** Demo 使用的接口 *****************************/
-
-+ (void)switchEnvironment:(BOOL)isTest;
-
-//+ (void)enableFileCloud:(BOOL)enable;
-//
-//+ (BOOL)supportFileCloud;
 
 @end
 
